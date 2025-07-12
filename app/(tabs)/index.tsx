@@ -5,6 +5,9 @@ import { StatusBar } from 'expo-status-bar'
 import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor, useSkiaFrameProcessor } from 'react-native-vision-camera';
 import { PaintStyle, Skia } from '@shopify/react-native-skia';
 import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
+import { runAtTargetFps } from 'react-native-vision-camera';
+import { useResizePlugin } from 'vision-camera-resize-plugin';
+
 
 const index = () => {
    const { hasPermission, requestPermission } = useCameraPermission();
@@ -16,8 +19,10 @@ const device = useCameraDevice('back')
   // "It's a special container that remembers a value between renders but 
   // changing it doesn’t cause a re-render."
   const [photoUri, setPhotoUri] = useState("");
-    // const [torchOn, setTorchOn] = useState(true) // or false to turn off
+  const [hexCode,setHexCode]=useState("")
 
+    // const [torchOn, setTorchOn] = useState(true) // or false to turn off
+const { resize } = useResizePlugin();
 useEffect(() => {
  
   // (async () => {
@@ -38,6 +43,7 @@ useEffect(() => {
       console.log("this is the device we got from hook",device)
     }
   }
+ 
 }, [hasPermission]);
 
 
@@ -65,50 +71,73 @@ useEffect(() => {
 
 
 const frameProcessor = useSkiaFrameProcessor((frame) => {
-  'worklet'
-  const framee = frame.pixelFormat
-  const frameWidth = frame.width
-  const frameHeight = frame.height
-  console.log(`this is the frame width x height ${frameWidth}x${frameHeight}`)
-  console.log("this is the pixel format of frame",framee)
-  frame.render()
-// Renders the Camera Frame to the Canvas.
-  const centerX = Math.floor(frameWidth / 2)
-  const centerY = Math.floor(frameHeight / 2)
+  'worklet';
 
-  const rectWidth = 150
-  const rectHeight = 150
+  const originalWidth = frame.width;
+  const originalHeight = frame.height;
+  const pixelFormat = frame.pixelFormat;
 
+  // Resize frame down for faster processing
+  const resizedWidth = 192;
+  const resizedHeight = 192;
 
-    // Calculate top-left corner to center the rectangle
-  const topLeftX = centerX - rectWidth / 2
-  const topLeftY = centerY - rectHeight / 2
-  const rect = Skia.XYWHRect(topLeftX, topLeftY, 150, 150)
-  const paint = Skia.Paint()
-  paint.setStyle(PaintStyle.Stroke);               // ← outline only
-  paint.setColor(Skia.Color('red'));      // ← red border
-  paint.setStrokeWidth(4);                // ← thickness
-  frame.drawRect(rect, paint)
+  const resized = resize(frame, {
+    scale: { width: resizedWidth, height: resizedHeight },
+    pixelFormat: 'rgb',
+    dataType: 'uint8',
+  });
+
+  if (!resized || resized.length < 3) return;
+
+  // Rectangle originally in full frame
+  const rectWidth = 150;
+  const rectHeight = 150;
+  const centerX = Math.floor(originalWidth / 2);
+  const centerY = Math.floor(originalHeight / 2);
+  const rectLeft = centerX - rectWidth / 2;
+  const rectTop = centerY - rectHeight / 2;
+
+  // Scale factor to map original frame → resized frame
+  const scaleX = resizedWidth / originalWidth;
+  const scaleY = resizedHeight / originalHeight;
+
+  // Scaled rectangle in resized image
+  const scaledLeft = Math.floor(rectLeft * scaleX);
+  const scaledTop = Math.floor(rectTop * scaleY);
+  const scaledWidth = Math.floor(rectWidth * scaleX);
+  const scaledHeight = Math.floor(rectHeight * scaleY);
+
+  let totalR = 0, totalG = 0, totalB = 0, count = 0;
+
+  for (let y = scaledTop; y < scaledTop + scaledHeight; y++) {
+    for (let x = scaledLeft; x < scaledLeft + scaledWidth; x++) {
+      const index = (y * resizedWidth + x) * 3;
+      totalR += resized[index];
+      totalG += resized[index + 1];
+      totalB += resized[index + 2];
+      count++;
+    }
+  }
+
+  const avgR = Math.round(totalR / count);
+  const avgG = Math.round(totalG / count);
+  const avgB = Math.round(totalB / count);
+
+  const hex = `#${avgR.toString(16).padStart(2, '0')}${avgG.toString(16).padStart(2, '0')}${avgB.toString(16).padStart(2, '0')}`;
+
+  console.log(`🎯 Averaged RGB: R=${avgR}, G=${avgG}, B=${avgB}, HEX=${hex}`);
+
+  // Draw the red rectangle and center dot (for UI)
+  frame.render();
+  const rect = Skia.XYWHRect(rectLeft, rectTop, rectWidth, rectHeight);
+  const paint = Skia.Paint();
+  paint.setStyle(PaintStyle.Stroke);
+  paint.setColor(Skia.Color('red'));
+  paint.setStrokeWidth(4);
+  frame.drawRect(rect, paint);
   frame.drawCircle(centerX, centerY, 4, paint);
-  // frame.readPixels(centerX,centerY,)
+}, []);
 
-   try{
-      const buffer = frame.toArrayBuffer(); // ArrayBuffer og bytes where 1 pixel=1bytes
-      const data = new Uint8Array(buffer);  // Typed array view over the buffer
-      console.log("Buffer length:", data.length); // Should be ~921600
-        const expected = frame.width * frame.height * 3;
-console.log("Expected:", expected, "Actual:", data.length);
-      // Calculate index into the linear byte array
-      const pixelIndex = (centerY * frameWidth + centerX)*3;
-      console.log("this is the pixel index",pixelIndex)
-
-      // Log first pixel safely
-      console.log(`centre pixel: RGB(${data[pixelIndex]}, ${data[pixelIndex+1]}, ${data[pixelIndex+2]})`);
-    } 
-    
-    catch (error) {
-      console.log('toArrayBuffer failed:', error);
-}}, [])
 
 
 
@@ -134,14 +163,15 @@ console.log("Expected:", expected, "Actual:", data.length);
               // here frameprocesser will be automatically passed frame argument
       isActive={true}
        torch={'on'} // force enable flashlight
-      resizeMode={"cover"}
-      pixelFormat="yuv" // 👈 Force RGB format, although less effiecient
+      resizeMode={"contain"}
+      // pixelFormat="rgb" // 👈 Force RGB format, although less effiecient
       preview={true}
       // Preview = The live camera feed you see on screen.
       // That visible "live image" — the real-time stream from your camera sensor — is called the preview.
        ref={cameraRef}
         photo={true} // very important!
     />
+   <Text style={{color:"red"}}>{hexCode}</Text>
     <Pressable style={styles.captureButton} onPress={captureImage}>
             <Text style={styles.buttonText}>Click Photo</Text>
           </Pressable>
@@ -203,5 +233,54 @@ const styles = StyleSheet.create({
     height: '100%',
   },
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// so now this code will solely focus on calculating correct color code of object which is inside rectangle and not outside of that box in original frame 
+
+
+// ChatGPT said:
+// Yes — ✅ Exactly.
+// The updated code solely focuses on averaging the color of pixels inside the red rectangle as it appears in the original full-resolution frame, not outside of it.
+
+// 🔍 How it ensures accuracy:
+// Rectangle is defined in original frame coordinates.
+
+// We downscale the full frame (for speed), and calculate where the rectangle would land in this resized version.
+
+// The code samples and averages only those pixels that fall within that scaled-down version of the red rectangle.
+
+// This gives you a color code representing only the object inside the red box — no influence from outside areas.
+
+// ✅ In short:
+// ✅ Goal	✅ Achieved?
+// Focus only on pixels inside box	✔️ Yes
+// Ignore outside region	✔️ Yes
+// Account for scaling	✔️ Yes
+// Accurate average RGB + HEX	✔️ Yes
+
+// If you'd like, I can also help you draw a live color preview (e.g., show a swatch or HEX text) on-screen — just let me know!
+
+
+
+
+
+
+
 
 

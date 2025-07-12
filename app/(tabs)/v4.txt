@@ -1,0 +1,251 @@
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { StatusBar } from 'expo-status-bar'
+import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor, useSkiaFrameProcessor } from 'react-native-vision-camera';
+import { PaintStyle, Skia } from '@shopify/react-native-skia';
+import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
+import { runAtTargetFps } from 'react-native-vision-camera';
+import { useResizePlugin } from 'vision-camera-resize-plugin';
+
+const index = () => {
+   const { hasPermission, requestPermission } = useCameraPermission();
+   const [isCameraOn,setCameraOn] = useState(false)
+const device = useCameraDevice('back')
+ const cameraRef = useRef<Camera>(null);// this stays consistent across re-renders
+  // useRef is a hook that gives you a container (called a "ref") that
+  //  can store a value without causing a re-render when it changes.
+  // "It's a special container that remembers a value between renders but 
+  // changing it doesn’t cause a re-render."
+  const [photoUri, setPhotoUri] = useState("");
+    // const [torchOn, setTorchOn] = useState(true) // or false to turn off
+const { resize } = useResizePlugin();
+useEffect(() => {
+ 
+  // (async () => {
+  //   const status = await Camera.requestCameraPermission();
+  //   console.log(`Camera permission status: ${status}`);
+  // })();
+  console.log("this is the state of permission",hasPermission)
+  if(hasPermission === false){
+    requestPermission()
+    console.log("permission was nit granted and hence requested for it",hasPermission)
+  }
+
+  else{
+    setCameraOn(true)
+    if(device){
+       console.log("Device formats:", device.formats);
+    console.log("Device pixel formats:", device.formats.map(f => f.pixelFormat));
+      console.log("this is the device we got from hook",device)
+    }
+  }
+}, [hasPermission]);
+
+
+
+//capture image 
+  const captureImage = async () => {
+    if (cameraRef.current) {
+      const photo = await cameraRef.current.takePhoto({
+        flash: 'on',
+        //returned photo is an  object//
+      });
+      setPhotoUri(`file://${photo.path}`);
+      console.log("this is the photo objet we got",photo)
+      // moveToGallery(photo.path)
+      // { isMirrored: false,
+      //                        │ path: '/data/user/0/com.privacy/cache/mrousavy8432853042043491865.jpg',
+      //                        │ isRawPhoto: false,
+      //                        │ height: 4080,
+      //                        │ orientation: 'portrait',
+      //                        └ width: 3060 }
+    }
+    setCameraOn(false)
+  };
+
+
+
+const frameProcessor = useSkiaFrameProcessor((frame) => {
+  'worklet'
+  const framee = frame.pixelFormat
+  const frameWidth = frame.width
+  const frameHeight = frame.height
+  console.log(`this is the frame width x height ${frameWidth}x${frameHeight}`)
+  console.log("this is the pixel format of frame",framee)
+  frame.render()
+// Renders the Camera Frame to the Canvas.
+  const centerX = Math.floor(frameWidth / 2)
+  const centerY = Math.floor(frameHeight / 2)
+
+const resized = resize(frame, {
+  scale: { width: 192, height: 192 },
+  pixelFormat: 'rgb',
+  dataType: 'uint8',
+});
+// Index of the center pixel (in pixels, not bytes)
+const centerNewX = Math.floor(192 / 2);
+const centerNewY = Math.floor(192 / 2);
+//we can hardcore 192 since we are passing hardcoded value in resize function as argument//
+
+
+// Convert 2D (x, y) to 1D index in the byte array
+const centerPixelIndex = (centerNewY * 192 + centerNewX) * 3; // Each pixel takes 3 bytes (RGB)
+
+const centerPixel = {
+  r: resized[centerPixelIndex],
+  g: resized[centerPixelIndex + 1],
+  b: resized[centerPixelIndex + 2]
+};
+
+console.log('Center Pixel RGB:', centerPixel);
+console.log(`this is r=>${centerPixel.r}, g=>${centerPixel.g}, b=>${centerPixel.b}, and arraylength==>${resized.byteLength}`)
+
+
+
+
+
+  const rectWidth = 150
+  const rectHeight = 150
+
+
+    // Calculate top-left corner to center the rectangle
+  const topLeftX = centerX - rectWidth / 2
+  const topLeftY = centerY - rectHeight / 2
+  const rect = Skia.XYWHRect(topLeftX, topLeftY, 150, 150)
+  const paint = Skia.Paint()
+  paint.setStyle(PaintStyle.Stroke);               // ← outline only
+  paint.setColor(Skia.Color('red'));      // ← red border
+  paint.setStrokeWidth(4);                // ← thickness
+  frame.drawRect(rect, paint)
+  frame.drawCircle(centerX, centerY, 4, paint);
+  // frame.readPixels(centerX,centerY,)
+
+//    try{
+//   //   const size = 1; // only 1 pixel for center
+
+//   // const pixels = frame.readPixels(centerX, centerY, { width: size, height: size });
+
+//   // if (pixels) {
+//   //   const r = pixels[0];
+//   //   const g = pixels[1];
+//   //   const b = pixels[2];
+//   //   const a = pixels[3]; // usually 255
+
+//   //   console.log(`Center pixel RGBA → (${r}, ${g}, ${b}, ${a})`);
+
+//   // }
+
+//       const buffer =  frame.toArrayBuffer(); // ArrayBuffer og bytes where 1 pixel=1bytes
+    
+//       const data = new Uint8Array(buffer);  // Typed array view over the buffer
+//       console.log("Buffer length:", data.length); // Should be ~921600
+//         const expected = frame.width * frame.height * 3;
+// console.log("Expected:", expected, "Actual:", data.length);
+//       // Calculate index into the linear byte array
+//       const pixelIndex = (centerY * frameWidth + centerX)*3;
+//       console.log("this is the pixel index",pixelIndex)
+
+//       // Log first pixel safely
+//       console.log(`centre pixel: RGB(${data[pixelIndex]}, ${data[pixelIndex+1]}, ${data[pixelIndex+2]})`);
+//     } 
+    
+//     catch (error) {
+//       console.log('toArrayBuffer failed:', error);
+// }}, [])
+},[])
+
+
+
+
+
+
+
+
+
+  return (
+    <>
+         
+      
+        {isCameraOn ===true ? 
+            (
+            <>
+            <SafeAreaView style={{flex:1}}>
+                        <Camera
+      style={StyleSheet.absoluteFill}
+      device={device}
+       frameProcessor={frameProcessor}  // ✅ this line is required
+              // here frameprocesser will be automatically passed frame argument
+      isActive={true}
+       torch={'on'} // force enable flashlight
+      resizeMode={"contain"}
+      // pixelFormat="rgb" // 👈 Force RGB format, although less effiecient
+      preview={true}
+      // Preview = The live camera feed you see on screen.
+      // That visible "live image" — the real-time stream from your camera sensor — is called the preview.
+       ref={cameraRef}
+        photo={true} // very important!
+    />
+    <Pressable style={styles.captureButton} onPress={captureImage}>
+            <Text style={styles.buttonText}>Click Photo</Text>
+          </Pressable>
+
+
+
+
+            </SafeAreaView>
+    
+
+          </>
+  
+  )
+      :
+    (  
+          <SafeAreaView style={{backgroundColor:"pink", flex:1}}>
+          {/* // why we have to write flex in safeareaView */}
+              <View style={styles.container}>
+              <Text>index</Text>
+            </View>
+        </SafeAreaView> )  }
+    
+    </>
+ 
+    
+   
+  
+  )
+}
+
+export default index
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  text: { color: '#fff', marginBottom: 20 },
+  button: {
+    backgroundColor: '#007bff',
+    padding: 10,
+    marginTop: 20,
+    borderRadius: 6,
+  },
+  captureButton: {
+    position: 'absolute',
+    bottom: 40,
+    backgroundColor: '#1abc9c',
+    padding: 14,
+      alignSelf: 'center',       // ✅ centers it horizontally inside its parent
+    borderRadius: 50,
+    marginLeft:10
+  },
+  buttonText: { color: 'white', fontWeight: 'bold' },
+  camera: {
+    width: '100%',
+    height: '100%',
+  },
+});
+
+
