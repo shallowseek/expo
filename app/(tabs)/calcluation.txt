@@ -1,0 +1,155 @@
+const frameProcessor = useSkiaFrameProcessor((frame) => {
+  'worklet'
+  const frameWidth = frame.width
+  const frameHeight = frame.height
+  console.log(this is the frame width x height ${frameWidth}x${frameHeight})
+  frame.render()
+// Renders the Camera Frame to the Canvas.
+  const centerX = frameWidth / 2
+  const centerY = frameHeight / 2
+  const rect = Skia.XYWHRect(centerX+10, centerY+10, 150, 150)
+  const paint = Skia.Paint()
+  paint.setStyle(PaintStyle.Stroke);               // ← outline only
+  paint.setColor(Skia.Color('red'));      // ← red border
+  paint.setStrokeWidth(4);                // ← thickness
+
+  frame.drawRect(rect, paint)
+}, []) , how to make rectangle appear in centre of frame
+
+
+ChatGPT said:
+To center the rectangle in the frame when using useSkiaFrameProcessor, you need to calculate the top-left corner of the rectangle such that it's centered within the frame dimensions.
+
+Currently, you're setting the top-left corner at (centerX + 10, centerY + 10), which offsets it to the bottom right — not centered.
+
+✅ Fix: Subtract half of the rectangle size from the center
+Here’s the corrected code:
+
+tsx
+Copy
+Edit
+const frameProcessor = useSkiaFrameProcessor((frame) => {
+  'worklet'
+  
+  const frameWidth = frame.width
+  const frameHeight = frame.height
+  console.log(`this is the frame width x height ${frameWidth}x${frameHeight}`)
+
+  frame.render()
+
+  // Calculate center
+  const centerX = frameWidth / 2
+  const centerY = frameHeight / 2
+
+  const rectWidth = 150
+  const rectHeight = 150
+
+  // Calculate top-left corner to center the rectangle
+  const topLeftX = centerX - rectWidth / 2
+  const topLeftY = centerY - rectHeight / 2
+
+  const rect = Skia.XYWHRect(topLeftX, topLeftY, rectWidth, rectHeight)
+  const paint = Skia.Paint()
+  paint.setStyle(PaintStyle.Stroke)
+  paint.setColor(Skia.Color('red'))
+  paint.setStrokeWidth(4)
+
+  frame.drawRect(rect, paint)
+
+}, [])
+✅ Summary of changes
+Subtracted rectWidth / 2 and rectHeight / 2 from centerX and centerY
+
+This ensures the rectangle is centered instead of offset
+
+Let me know if you'd like to animate or dynamically size the rectangle based on the frame!
+
+
+
+
+
+
+
+
+You said:
+how to you calculate that explain visually the dimensions
+
+
+ChatGPT said:
+Great question! Let's visually and mathematically understand how to center a rectangle in a frame.
+
+🧠 You’re trying to draw a rectangle:
+Inside a 2D frame (like a photo or camera view)
+
+The frame has a certain width and height
+
+You want the rectangle to be centered
+
+🎯 Goal:
+Place the rectangle so its center aligns with the center of the frame.
+
+✍️ Example:
+Let’s say:
+
+Frame size = width: 400, height: 300
+
+Rectangle size = width: 150, height: 150
+
+📐 Frame center:
+To get the center of the frame:
+
+ini
+Copy
+Edit
+centerX = frameWidth / 2 = 400 / 2 = 200
+centerY = frameHeight / 2 = 300 / 2 = 150
+This is the point in the middle of the frame.
+
+🟥 Now, to center the rectangle:
+If you start drawing the rectangle from (200, 150), it will start at the center, which is wrong — because it will go down and to the right of center.
+
+What you actually want is the rectangle's center to be at (200, 150)
+
+So you have to move backward by half the rectangle’s size.
+
+ini
+Copy
+Edit
+rectTopLeftX = centerX - rectWidth / 2 = 200 - 75 = 125
+rectTopLeftY = centerY - rectHeight / 2 = 150 - 75 = 75
+🧾 Visually:
+sql
+Copy
+Edit
+Frame (400x300):
+
++------------------------------------------+
+|                                          |
+|                                          |
+|                +---------+               |
+|                |         |               |
+|                |  RED    | ← 150x150     |
+|                |  RECT   |               |
+|                +---------+               |
+|                                          |
++------------------------------------------+
+
+Center of frame: (200, 150)
+Top-left of rect: (125, 75)
+✅ Summary Rule:
+To center any shape in a frame:
+
+js
+Copy
+Edit
+topLeftX = (frameWidth - shapeWidth) / 2
+topLeftY = (frameHeight - shapeHeight) / 2
+Let me know if you want to visualize this with Skia drawing code or see how it would look if the rectangle had different dimensions!
+
+
+
+
+
+
+
+

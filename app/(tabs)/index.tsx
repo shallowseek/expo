@@ -1,75 +1,207 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { StatusBar } from 'expo-status-bar'
+import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor, useSkiaFrameProcessor } from 'react-native-vision-camera';
+import { PaintStyle, Skia } from '@shopify/react-native-skia';
+import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const index = () => {
+   const { hasPermission, requestPermission } = useCameraPermission();
+   const [isCameraOn,setCameraOn] = useState(false)
+const device = useCameraDevice('back')
+ const cameraRef = useRef<Camera>(null);// this stays consistent across re-renders
+  // useRef is a hook that gives you a container (called a "ref") that
+  //  can store a value without causing a re-render when it changes.
+  // "It's a special container that remembers a value between renders but 
+  // changing it doesn’t cause a re-render."
+  const [photoUri, setPhotoUri] = useState("");
+    // const [torchOn, setTorchOn] = useState(true) // or false to turn off
 
-export default function HomeScreen() {
+useEffect(() => {
+ 
+  // (async () => {
+  //   const status = await Camera.requestCameraPermission();
+  //   console.log(`Camera permission status: ${status}`);
+  // })();
+  console.log("this is the state of permission",hasPermission)
+  if(hasPermission === false){
+    requestPermission()
+    console.log("permission was nit granted and hence requested for it",hasPermission)
+  }
+
+  else{
+    setCameraOn(true)
+    if(device){
+       console.log("Device formats:", device.formats);
+    console.log("Device pixel formats:", device.formats.map(f => f.pixelFormat));
+      console.log("this is the device we got from hook",device)
+    }
+  }
+}, [hasPermission]);
+
+
+
+//capture image 
+  const captureImage = async () => {
+    if (cameraRef.current) {
+      const photo = await cameraRef.current.takePhoto({
+        flash: 'on',
+        //returned photo is an  object//
+      });
+      setPhotoUri(`file://${photo.path}`);
+      console.log("this is the photo objet we got",photo)
+      // moveToGallery(photo.path)
+      // { isMirrored: false,
+      //                        │ path: '/data/user/0/com.privacy/cache/mrousavy8432853042043491865.jpg',
+      //                        │ isRawPhoto: false,
+      //                        │ height: 4080,
+      //                        │ orientation: 'portrait',
+      //                        └ width: 3060 }
+    }
+    setCameraOn(false)
+  };
+
+
+
+const frameProcessor = useSkiaFrameProcessor((frame) => {
+  'worklet'
+  const framee = frame.pixelFormat
+  const frameWidth = frame.width
+  const frameHeight = frame.height
+  console.log(`this is the frame width x height ${frameWidth}x${frameHeight}`)
+  console.log("this is the pixel format of frame",framee)
+  frame.render()
+// Renders the Camera Frame to the Canvas.
+  const centerX = Math.floor(frameWidth / 2)
+  const centerY = Math.floor(frameHeight / 2)
+
+  const rectWidth = 150
+  const rectHeight = 150
+
+
+    // Calculate top-left corner to center the rectangle
+  const topLeftX = centerX - rectWidth / 2
+  const topLeftY = centerY - rectHeight / 2
+  const rect = Skia.XYWHRect(topLeftX, topLeftY, 150, 150)
+  const paint = Skia.Paint()
+  paint.setStyle(PaintStyle.Stroke);               // ← outline only
+  paint.setColor(Skia.Color('red'));      // ← red border
+  paint.setStrokeWidth(4);                // ← thickness
+  frame.drawRect(rect, paint)
+  frame.drawCircle(centerX, centerY, 4, paint);
+  // frame.readPixels(centerX,centerY,)
+
+   try{
+      const buffer = frame.toArrayBuffer(); // ArrayBuffer og bytes where 1 pixel=1bytes
+      const data = new Uint8Array(buffer);  // Typed array view over the buffer
+      console.log("Buffer length:", data.length); // Should be ~921600
+        const expected = frame.width * frame.height * 3;
+console.log("Expected:", expected, "Actual:", data.length);
+      // Calculate index into the linear byte array
+      const pixelIndex = (centerY * frameWidth + centerX)*3;
+      console.log("this is the pixel index",pixelIndex)
+
+      // Log first pixel safely
+      console.log(`centre pixel: RGB(${data[pixelIndex]}, ${data[pixelIndex+1]}, ${data[pixelIndex+2]})`);
+    } 
+    
+    catch (error) {
+      console.log('toArrayBuffer failed:', error);
+}}, [])
+
+
+
+
+
+
+
+
+
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+    <>
+         
+      
+        {isCameraOn ===true ? 
+            (
+            <>
+            <SafeAreaView style={{flex:1}}>
+                        <Camera
+      style={StyleSheet.absoluteFill}
+      device={device}
+       frameProcessor={frameProcessor}  // ✅ this line is required
+              // here frameprocesser will be automatically passed frame argument
+      isActive={true}
+       torch={'on'} // force enable flashlight
+      resizeMode={"cover"}
+      pixelFormat="yuv" // 👈 Force RGB format, although less effiecient
+      preview={true}
+      // Preview = The live camera feed you see on screen.
+      // That visible "live image" — the real-time stream from your camera sensor — is called the preview.
+       ref={cameraRef}
+        photo={true} // very important!
+    />
+    <Pressable style={styles.captureButton} onPress={captureImage}>
+            <Text style={styles.buttonText}>Click Photo</Text>
+          </Pressable>
+
+
+
+
+            </SafeAreaView>
+    
+
+          </>
+  
+  )
+      :
+    (  
+          <SafeAreaView style={{backgroundColor:"pink", flex:1}}>
+          {/* // why we have to write flex in safeareaView */}
+              <View style={styles.container}>
+              <Text>index</Text>
+            </View>
+        </SafeAreaView> )  }
+    
+    </>
+ 
+    
+   
+  
+  )
 }
 
+export default index
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  text: { color: '#fff', marginBottom: 20 },
+  button: {
+    backgroundColor: '#007bff',
+    padding: 10,
+    marginTop: 20,
+    borderRadius: 6,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  captureButton: {
     position: 'absolute',
+    bottom: 40,
+    backgroundColor: '#1abc9c',
+    padding: 14,
+      alignSelf: 'center',       // ✅ centers it horizontally inside its parent
+    borderRadius: 50,
+    marginLeft:10
+  },
+  buttonText: { color: 'white', fontWeight: 'bold' },
+  camera: {
+    width: '100%',
+    height: '100%',
   },
 });
+
+
