@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import Index from './(tabs)/index'
 import { useColorScheme } from '@/hooks/useColorScheme';
-
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
@@ -18,6 +18,10 @@ export default function RootLayout() {
   }
 
   return (
-    <Index/>
+     <GestureHandlerRootView style={{ flex: 1 }}>
+  <Index/>
+
+     </GestureHandlerRootView>
+  
   );
 }

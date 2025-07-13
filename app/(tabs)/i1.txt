@@ -1,0 +1,114 @@
+import React, { useState } from 'react'
+import { View, StyleSheet, Pressable, Text, Dimensions, Image as RNImage } from 'react-native'
+import * as ImagePicker from 'expo-image-picker'
+import { Canvas, Image, useImage, useTouchHandler, Skia, useValue, useDerivedValue, Circle, Paint, Text as SkiaText, useFont } from '@shopify/react-native-skia'
+import { rgbaToHex } from '@shopify/react-native-skia'
+
+const { width, height } = Dimensions.get('window')
+
+export default function ColorPickerMagnifier() {
+  const [photoUri, setPhotoUri] = useState<string | null>(null)
+  const image = useImage(photoUri || '')
+
+  const x = useValue(width / 2)
+  const y = useValue(height / 2)
+  const pixelColor = useValue(Skia.Color('white'))
+
+  const selectPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images })
+    if (!result.canceled) {
+      setPhotoUri(result.assets[0].uri)
+    }
+  }
+
+  const onTouch = useTouchHandler({
+    onActive: ({ x: tx, y: ty }) => {
+      x.current = tx
+      y.current = ty
+    },
+  })
+
+  useDerivedValue(() => {
+    if (!image) return
+    const scale = image.width / width
+    const px = Math.floor(x.current * scale)
+    const py = Math.floor(y.current * scale)
+    const snapshot = image.makeImageSnapshot()
+    const color = snapshot.readPixels(px, py)
+    if (color) pixelColor.current = Skia.Color(color)
+  }, [x, y, image])
+
+  return (
+    <View style={{ flex: 1 }}>
+      {image && (
+        <Canvas style={StyleSheet.absoluteFill} onTouch={onTouch}>
+          <Image image={image} x={0} y={0} width={width} height={height} />
+
+          {/* Magnifying Glass */}
+          <Circle
+            cx={x}
+            cy={y}
+            r={40}
+            color={pixelColor}
+            style="stroke"
+            strokeWidth={4}
+          />
+        </Canvas>
+      )}
+
+      {!image && (
+        <View style={styles.placeholderContainer}>
+          <Text style={styles.placeholderText}>Select an image to start</Text>
+        </View>
+      )}
+
+      {/* Button */}
+      <Pressable style={styles.button} onPress={selectPhoto}>
+        <Text style={styles.buttonText}>Pick Image</Text>
+      </Pressable>
+
+      {/* Hex Code */}
+      <View style={styles.hexContainer}>
+        <Text style={styles.hexText}>{rgbaToHex(pixelColor.current)}</Text>
+      </View>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  button: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    backgroundColor: '#1abc9c',
+    padding: 12,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  hexContainer: {
+    position: 'absolute',
+    top: 50,
+    alignSelf: 'center',
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 10,
+    elevation: 5,
+  },
+  hexText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  placeholderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderText: {
+    fontSize: 18,
+    color: 'gray',
+  },
+})

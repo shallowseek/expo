@@ -1,0 +1,262 @@
+// MagnifierTool.tsx
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  Text,
+  Button,
+} from 'react-native';
+import { Canvas, Image as SkiaImage, useImage, useTouchHandler, useValue, Circle, Group, Paint, Rect, useComputedValue } from '@shopify/react-native-skia';
+import { launchImageLibrary } from 'react-native-image-picker';
+
+const { width: screenWidth } = Dimensions.get('window');
+
+const MagnifierTool = () => {
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const touchX = useValue(150);
+  const touchY = useValue(150);
+  const image = useImage(imageUri || '');
+
+  const magnifierRadius = 40;
+  const zoom = 2;
+
+  const onTouch = useTouchHandler({
+    onActive: ({ x, y }) => {
+      touchX.current = x;
+      touchY.current = y;
+    },
+  });
+
+  const pickImage = async () => {
+    const result = await launchImageLibrary({ mediaType: 'photo' });
+    if (result.assets && result.assets[0]?.uri) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const imageHeight = useComputedValue(() => {
+    if (!image) return 0;
+    return (image.height / image.width) * screenWidth;
+  }, [image]);
+
+  return (
+    <View style={styles.container}>
+      <Button title="Pick an Image" onPress={pickImage} />
+      {image && (
+        <>
+          <Canvas
+            style={{ width: screenWidth, height: imageHeight }}
+            onTouch={onTouch}
+          >
+            {/* Draw image */}
+            <SkiaImage
+              image={image}
+              x={0}
+              y={0}
+              width={screenWidth}
+              height={imageHeight}
+            />
+
+            {/* Magnifier with zoomed image section */}
+            <Group
+              clip={
+                <Circle cx={touchX} cy={touchY} r={magnifierRadius} />
+              }
+            >
+              <SkiaImage
+                image={image}
+                x={useComputedValue(() => touchX.current - magnifierRadius * zoom, [touchX])}
+                y={useComputedValue(() => touchY.current - magnifierRadius * zoom, [touchY])}
+                width={screenWidth * zoom}
+                height={imageHeight * zoom}
+              />
+            </Group>
+
+            {/* Outline of magnifier */}
+            <Circle
+              cx={touchX}
+              cy={touchY}
+              r={magnifierRadius}
+              color="rgba(0,0,0,0.4)"
+              style="stroke"
+              strokeWidth={2}
+            />
+          </Canvas>
+
+          {/* Optional text below canvas */}
+          <View style={styles.label}>
+            <Text style={{ fontWeight: 'bold' }}>
+              Hover the magnifier to inspect image!
+            </Text>
+            <Text>
+              Touch coordinates: ({Math.floor(touchX.current)},{' '}
+              {Math.floor(touchY.current)})
+            </Text>
+          </View>
+        </>
+      )}
+    </View>
+  );
+};
+
+export default MagnifierTool;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingTop: 50,
+  },
+  label: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
