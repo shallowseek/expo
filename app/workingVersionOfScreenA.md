@@ -1,0 +1,487 @@
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  TouchableWithoutFeedback,
+  BackHandler,
+  // Text,
+  Platform,
+  Alert,
+  SafeAreaView,
+  Pressable,
+} from 'react-native';
+import {
+  Button,
+  IconButton,
+  Drawer,
+  Card,
+  Text,
+
+  Searchbar,
+  Divider,
+} from 'react-native-paper';
+import CardContent from 'react-native-paper/lib/typescript/components/Card/CardContent';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor, useSkiaFrameProcessor } from 'react-native-vision-camera';
+import { PaintStyle, Skia } from '@shopify/react-native-skia';
+import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
+import { runAtTargetFps } from 'react-native-vision-camera';
+import captureImage from './captureImage';
+
+import { useResizePlugin } from 'vision-camera-resize-plugin';
+const { width, height } = Dimensions.get('window');
+const DRAWER_WIDTH = width * 0.25; // ✅ 75% of screen width
+
+export default function PaperDrawerExample() {
+  const drawerX = useSharedValue(-DRAWER_WIDTH);
+  const isDrawerOpen = useSharedValue(false);
+     const { hasPermission, requestPermission } = useCameraPermission();
+   const [isCameraOn,setCameraOn] = useState(false)
+   const device = useCameraDevice('back')
+    const cameraRef = useRef<Camera>(null);
+    const { resize } = useResizePlugin();
+  const hexCode = useSharedValue('')
+  let hexValue = ''
+  const openDrawer = () => {
+    drawerX.value = withTiming(0);
+    isDrawerOpen.value = true;
+  };
+
+  const closeDrawer = () => {
+    drawerX.value = withTiming(-DRAWER_WIDTH);
+    isDrawerOpen.value = false;
+  };
+
+  const drawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: drawerX.value }],
+  }));
+
+  // useEffect(() => {
+  //   const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+  //     if (isDrawerOpen.value) {
+  //       closeDrawer();
+  //       return true;
+  //     }
+  //     return false;
+  //   });
+  //   return () => backHandler.remove();
+  // }, []);
+
+// useEffect(()=>{
+//    console.log("this is the state of permission==>>",hasPermission)
+//    if(hasPermission===true){
+//     console.log("this is the device we got after permission is true===>>")
+//     //first we checked if user has granted camera psermission
+//     //then we will check if user has camera device//
+
+
+//     if(device){
+//        console.log("Device formats:", device.formats);
+//     // console.log("Device pixel formats:", device.formats.map(f => f.pixelFormat));
+//       // console.log("this is the device we got from hook",device)
+//       //then we will open live camera and give hex code//
+//       setCameraOn(true)
+      
+//     }
+
+//    else{
+//         console.log("you don't have comaptiable device")
+//       }
+//     }
+
+
+
+
+
+// }, [hasPermission]);
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+// //live camera prreview on pressing camera button//
+// const livePreview = ()=>{
+//  //on pressing camera button, useeffect will chehck camera permissionad device available//
+//  if(hasPermission !== true){
+//   console.log("we will ask user for permussion if not granted")
+//   requestPermission()
+
+//  }
+//  //now we will check if device is availae in phone//
+//  if(!device){
+//   console.log("no compatiable device is available")
+//  }
+//   //if everything is available, then we will open camera when pressed button//
+//   setCameraOn(true)
+// return(
+//   <>
+//     {isCameraOn === true ? (
+//       <>
+//         <SafeAreaView style={{flex:1}}>
+//           <Camera
+//             style={StyleSheet.absoluteFill}
+//             device={device}
+//             // frameProcessor={frameProcessor}  // ✅ this line is required
+//             // here frameprocesser will be automatically passed frame argument
+//             isActive={true}
+//             torch={'on'} // force enable flashlight
+//             resizeMode={"contain"}
+//             // pixelFormat="rgb" // 👈 Force RGB format, although less effiecient
+//             preview={true}
+//             // Preview = The live camera feed you see on screen.
+//             // That visible "live image" — the real-time stream from your camera sensor — is called the preview.
+//             ref={cameraRef}
+//             photo={true} // very important!
+//           />
+//           {/* <Text style={{color:"red"}}>{hexCode}</Text> */}
+//           <Pressable style={styles.captureButton} onPress={()=>captureImage(cameraRef)}>
+//             <Text style={styles.buttonText}>Click Photo</Text>
+//           </Pressable>
+//         </SafeAreaView>
+//       </>
+//     ) : null}
+//   </>
+// )}
+
+
+
+const frameProcessor = useSkiaFrameProcessor((frame) => {
+  'worklet';
+
+  const originalWidth = frame.width;
+  const originalHeight = frame.height;
+  const pixelFormat = frame.pixelFormat;
+
+  // Resize frame down for faster processing
+  const resizedWidth = 192;
+  const resizedHeight = 192;
+
+  const resized = resize(frame, {
+    scale: { width: resizedWidth, height: resizedHeight },
+    pixelFormat: 'rgb',
+    dataType: 'uint8',
+  });
+
+  if (!resized || resized.length < 3) return;
+
+  // Rectangle originally in full frame
+  const rectWidth = 50;
+  const rectHeight = 50;
+  const centerX = Math.floor(originalWidth / 2);
+  const centerY = Math.floor(originalHeight / 2);
+  const rectLeft = centerX - rectWidth / 2;
+  const rectTop = centerY - rectHeight / 2;
+
+  // Scale factor to map original frame → resized frame
+  const scaleX = resizedWidth / originalWidth;
+  const scaleY = resizedHeight / originalHeight;
+
+  // Scaled rectangle in resized image
+  const scaledLeft = Math.floor(rectLeft * scaleX);
+  const scaledTop = Math.floor(rectTop * scaleY);
+  const scaledWidth = Math.floor(rectWidth * scaleX);
+  const scaledHeight = Math.floor(rectHeight * scaleY);
+
+  let totalR = 0, totalG = 0, totalB = 0, count = 0;
+
+  for (let y = scaledTop; y < scaledTop + scaledHeight; y++) {
+    for (let x = scaledLeft; x < scaledLeft + scaledWidth; x++) {
+      const index = (y * resizedWidth + x) * 3;
+      totalR += resized[index];
+      totalG += resized[index + 1];
+      totalB += resized[index + 2];
+      count++;
+    }
+  }
+
+  const avgR = Math.round(totalR / count);
+  const avgG = Math.round(totalG / count);
+  const avgB = Math.round(totalB / count);
+
+   hexCode.value = `#${avgR.toString(16).padStart(2, '0')}${avgG.toString(16).padStart(2, '0')}${avgB.toString(16).padStart(2, '0')}`;
+hexValue  = hexCode.value
+  console.log(`🎯 Averaged RGB: R=${avgR}, G=${avgG}, B=${avgB}, HEX=${hexCode.value}`);
+
+  // Draw the red rectangle and center dot (for UI)
+  frame.render();
+  const rect = Skia.XYWHRect(rectLeft, rectTop, rectWidth, rectHeight);
+  const paint = Skia.Paint();
+  paint.setStyle(PaintStyle.Stroke);
+  paint.setColor(Skia.Color('red'));
+  paint.setStrokeWidth(4);
+  frame.drawRect(rect, paint);
+  frame.drawCircle(centerX, centerY, 4, paint);
+}, []);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ return (
+<View style={{ 
+  flex: 1, 
+  borderColor: 'red', 
+  borderWidth: 3, 
+  margin: 10, 
+  borderRadius: 10, 
+  overflow: 'hidden',
+  position: 'relative' // ensures children can be absolutely positioned
+}}>
+  {isCameraOn && device ? (
+    <>
+      <Camera
+        style={StyleSheet.absoluteFill}
+        device={device}
+        isActive={true}
+        torch="on"
+        resizeMode="contain"
+        ref={cameraRef}
+        photo={true}
+        frameProcessor={frameProcessor}
+      />
+      
+      {/* Overlay buttons */}
+      <Pressable
+        style={{
+          position: 'absolute',
+          // Float above the camera (because of position: 'absolute')
+          bottom: 100,
+          alignSelf: 'center',
+          backgroundColor: '#1abc9c',
+          padding: 14,
+          borderRadius: 50,
+          zIndex: 10,
+        }}
+        onPress={async () => {
+          await captureImage(cameraRef);
+          setCameraOn(false);
+        }}
+      >
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>Click Photo</Text>
+      </Pressable>
+      <Text style={
+        {color:"white",
+          position:"absolute",
+          zIndex:10,
+          top:300,
+        }
+      }>{`this is the ${hexCode.value}`}</Text>
+
+      <IconButton
+        icon="flash"
+        size={30}
+        onPress={() => console.log("View pressed")}
+        style={{
+          position: 'absolute',
+          top: 200,
+          right: 0,
+          backgroundColor: 'white',
+          zIndex: 10,
+        }}
+      />
+    </>
+  ) : (
+    <>
+      {/* ✅ Only show UI if camera is not active */}
+      <View style={styles.header}>
+        <IconButton icon="menu" onPress={openDrawer} />
+        <Text style={styles.title}>Colory</Text>
+        <IconButton icon="cog" onPress={() => console.log('Settings')} />
+      </View>
+
+      <View style={styles.camera}>
+        <Button
+          mode="contained"
+          icon="camera"
+          onPress={() => {
+            if (hasPermission) {
+              if (device) {
+                setCameraOn(true);
+              } else {
+                console.log('No compatible device found.');
+              }
+            } else {
+              requestPermission();
+            }
+          }}
+        >
+          Open Camera
+        </Button>
+      </View>
+
+      <View style={styles.cardContainer}>
+        <Searchbar placeholder="Search" value="" />
+        <Card style={{ width: '100%' }}>
+          <View style={styles.row}>
+            <Card.Content style={styles.cardContent}>
+              <Text variant="bodyMedium" numberOfLines={1}>
+                This is a long card content that should not push buttons to next line
+              </Text>
+            </Card.Content>
+            <Card.Actions style={styles.cardButtons}>
+              <IconButton icon="eye" />
+              <Divider leftInset={true} bold={true} />
+              <IconButton icon="delete" />
+            </Card.Actions>
+          </View>
+        </Card>
+      </View>
+    </>
+  )}
+
+    {/* Drawer and Overlay should always be on top */}
+    {isDrawerOpen.value && (
+      <TouchableWithoutFeedback onPress={closeDrawer}>
+        <View style={styles.overlay} />
+      </TouchableWithoutFeedback>
+    )}
+
+    <Animated.View style={[styles.drawer, drawerStyle]}>
+      <Drawer.CollapsedItem
+        focusedIcon="home"
+        label="Home"
+        onPress={() => {
+          console.log('Home Pressed');
+          closeDrawer();
+        }}
+      />
+      <Drawer.CollapsedItem
+        focusedIcon="account"
+        label="Profile"
+        onPress={() => {
+          console.log('Profile Pressed');
+          closeDrawer();
+        }}
+      />
+      <Drawer.CollapsedItem
+        focusedIcon="logout"
+        label="Logout"
+        onPress={() => {
+          console.log('Logout');
+          closeDrawer();
+        }}
+      />
+    </Animated.View>
+  </View>
+);
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+    paddingTop: 40,
+    gap:20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    backgroundColor:"cyan",
+    borderColor:'red',
+    borderWidth:2,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: height,
+    width: DRAWER_WIDTH,
+    backgroundColor: 'white',
+    paddingTop: 60,
+    zIndex: 10,
+    elevation: 4,
+  },
+  overlay: {
+    position: 'absolute',
+    width,
+    height,
+    top: 0,
+    left: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    zIndex: 5,
+  },
+  camera:{
+    flexDirection:"row",
+    alignItems:"center",
+    justifyContent:"center",
+    borderColor:"green",
+    borderWidth:3,
+
+  },
+  cardContainer:{
+    borderColor:"white",
+    borderWidth:3,
+    alignItems:"center",
+    justifyContent:"center",
+  },
+    row: {
+      borderColor:"red",
+      borderWidth:2,
+     flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  paddingHorizontal: 8,
+  },
+  cardContent:{
+    borderColor:'black',
+    borderWidth:2,
+      flex: 1,
+  marginRight: 10, // space before buttons    
+
+  },
+  cardButtons:{
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  flexShrink: 0, // don't shrink
+    borderColor:"blue",
+    borderWidth:3,
+  },
+    captureButton: {
+    position: 'absolute',
+    bottom: 40,
+    backgroundColor: '#1abc9c',
+    padding: 14,
+      alignSelf: 'center',       // ✅ centers it horizontally inside its parent
+    borderRadius: 50,
+    marginLeft:10
+  },
+  buttonText: {
+     color: 'white',
+     fontWeight: 'bold',
+ },
+})

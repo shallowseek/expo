@@ -1,17 +1,9 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
-import Index from './index';
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { View, Text } from 'react-native';
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+export default function ScreenA() {
   return (
-    <Index />
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>This is Screen A</Text>
+    </View>
   );
 }

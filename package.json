@@ -16,6 +16,8 @@
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
+    "@react-navigation/native-stack": "^7.3.21",
+    "@react-navigation/stack": "^7.4.2",
     "@shopify/react-native-skia": "2.0.0-next.4",
     "dripsy": "^4.3.8",
     "expo": "~53.0.17",
@@ -59,6 +61,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@react-native-community/cli": "^19.1.0",
+    "@types/lodash": "^4.17.20",
     "@types/react": "~19.0.10",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",

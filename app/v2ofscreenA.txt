@@ -1,0 +1,152 @@
+import React, { useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  BackHandler,
+  Platform,
+  useColorScheme,
+} from 'react-native';
+import { Button, IconButton } from 'react-native-paper';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+
+const { width, height } = Dimensions.get('window');
+const DRAWER_WIDTH = 250;
+
+export default function ScreenA() {
+  const color = useColorScheme()
+  const backgroundColor = color ==="dark"?"white":"black"
+  const leftDrawer = useSharedValue(-DRAWER_WIDTH);
+  const rightDrawer = useSharedValue(width);
+  const isDrawerOpen = useSharedValue(false); // track if either drawer is open
+
+  // Close All Drawers
+  const closeDrawers = () => {
+    leftDrawer.value = withTiming(-DRAWER_WIDTH);
+    rightDrawer.value = withTiming(width);
+    isDrawerOpen.value = false;
+  };
+
+  const openLeftDrawer = () => {
+    leftDrawer.value = withTiming(0);
+    isDrawerOpen.value = true;
+  };
+
+  const openRightDrawer = () => {
+    rightDrawer.value = withTiming(width - DRAWER_WIDTH);
+    isDrawerOpen.value = true;
+  };
+
+  const leftDrawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: leftDrawer.value }],
+  }));
+
+  const rightDrawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: rightDrawer.value }],
+  }));
+
+  // 🔙 Handle Android back press
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isDrawerOpen.value) {
+        closeDrawers();
+        return true; // block default behavior
+      }
+      return false; // allow default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, []);
+
+  return (
+    <View style={[styles.container, {backgroundColor}]}>
+      <View style={styles.buttonRow}>
+        <IconButton icon="menu" mode="contained" onPress={openLeftDrawer} />
+        <Button mode="contained" icon="camera" onPress={() => console.log('camera')}>
+          Open Camera
+        </Button>
+        <IconButton icon="cog" mode="outlined" onPress={openRightDrawer} />
+      </View>
+
+      {/* 🔲 Overlay when drawer is open */}
+      {isDrawerOpen.value && (
+        <TouchableWithoutFeedback onPress={closeDrawers}>
+          <View style={styles.overlay} />
+        </TouchableWithoutFeedback>
+      )}
+
+      {/* 📥 Left Drawer */}
+      <Animated.View style={[styles.drawer, styles.leftDrawer, leftDrawerStyle]}>
+        <Text style={styles.drawerText}>Menu</Text>
+        <TouchableOpacity onPress={closeDrawers}>
+          <Text style={styles.closeBtn}>Close</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* 📤 Right Drawer */}
+      <Animated.View style={[styles.drawer, styles.rightDrawer, rightDrawerStyle]}>
+        <Text style={styles.drawerText}>Settings</Text>
+        <TouchableOpacity onPress={closeDrawers}>
+          <Text style={styles.closeBtn}>Close</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, 
+    paddingTop: 50,
+     paddingHorizontal: 20,
+    
+    },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: '',
+    gap: 20,
+
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: DRAWER_WIDTH,
+    backgroundColor: '#fff',
+    padding: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 2, height: 0 },
+    zIndex: 10,
+  },
+  leftDrawer: {
+    left: 0,
+  },
+  rightDrawer: {
+    right: 0,
+  },
+  drawerText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  closeBtn: {
+    marginTop: 20,
+    color: 'blue',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width,
+    height,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    zIndex: 5,
+  },
+});

@@ -1,0 +1,222 @@
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  TouchableWithoutFeedback,
+  BackHandler,
+  // Text,
+  Platform,
+} from 'react-native';
+import {
+  Button,
+  IconButton,
+  Drawer,
+  Card,
+  Text,
+  Dialog, 
+  Portal,
+  Searchbar,
+  Divider,
+} from 'react-native-paper';
+import CardContent from 'react-native-paper/lib/typescript/components/Card/CardContent';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor, useSkiaFrameProcessor } from 'react-native-vision-camera';
+
+const { width, height } = Dimensions.get('window');
+const DRAWER_WIDTH = (15 % width);
+
+export default function PaperDrawerExample() {
+  const drawerX = useSharedValue(-DRAWER_WIDTH);
+  const isDrawerOpen = useSharedValue(false);
+     const { hasPermission, requestPermission } = useCameraPermission();
+   const [isCameraOn,setCameraOn] = useState(false)
+
+  const openDrawer = () => {
+    drawerX.value = withTiming(0);
+    isDrawerOpen.value = true;
+  };
+
+  const closeDrawer = () => {
+    drawerX.value = withTiming(-DRAWER_WIDTH);
+    isDrawerOpen.value = false;
+  };
+
+  const drawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: drawerX.value }],
+  }));
+
+  // useEffect(() => {
+  //   const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+  //     if (isDrawerOpen.value) {
+  //       closeDrawer();
+  //       return true;
+  //     }
+  //     return false;
+  //   });
+  //   return () => backHandler.remove();
+  // }, []);
+
+
+ 
+
+
+
+
+  return (
+    <View style={styles.container}>
+              <View style={styles.header}>
+                <IconButton icon="menu" onPress={openDrawer} />
+                <Text style={styles.title}>Colory</Text>
+                <IconButton icon="cog" onPress={() => console.log('Settings')} />
+              </View>
+              <View style={styles.camera}>
+                   <Button mode="contained" icon="camera" onPress={()=>console.log("camera pressed")}>
+                        Open Camera
+                    </Button>                    
+
+              </View>
+
+
+             <View style={styles.cardContainer}>
+                                                <Searchbar
+                                        placeholder="Search"
+                                        // onChangeText={setSearchQuery}
+                                        value=""
+                                      />
+                  <Card style={{ width: '100%' }}>
+                    <View style={styles.row}>
+                        <Card.Content style={styles.cardContent}>
+                              <Text variant="bodyMedium" numberOfLines={1}>
+                                This is a long card content that should not push buttons to next line
+                              </Text>
+                        </Card.Content>
+
+                        <Card.Actions style={styles.cardButtons}>
+                              <IconButton icon="eye" />
+                                <Divider leftInset={true} bold={true} />
+                              <IconButton icon="delete" />
+                        </Card.Actions>
+                   </View>
+                </Card>
+            </View>
+
+
+      {isDrawerOpen.value && (
+        <TouchableWithoutFeedback onPress={closeDrawer}>
+          <View style={styles.overlay} />
+        </TouchableWithoutFeedback>
+      )}
+
+      <Animated.View style={[styles.drawer, drawerStyle]}>
+        <Drawer.CollapsedItem
+          focusedIcon="home"
+          label="Home"
+          onPress={() => {
+            console.log('Home Pressed');
+            closeDrawer();
+          }}
+        />
+        <Drawer.CollapsedItem
+          focusedIcon="account"
+          label="Profile"
+          onPress={() => {
+            console.log('Profile Pressed');
+            closeDrawer();
+          }}
+        />
+        <Drawer.CollapsedItem
+          focusedIcon="logout"
+          label="Logout"
+          onPress={() => {
+            console.log('Logout');
+            closeDrawer();
+          }}
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+    paddingTop: 40,
+    gap:20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    backgroundColor:"cyan",
+    borderColor:'red',
+    borderWidth:2,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: height,
+    width: DRAWER_WIDTH,
+    backgroundColor: 'white',
+    paddingTop: 60,
+    zIndex: 10,
+    elevation: 4,
+  },
+  overlay: {
+    position: 'absolute',
+    width,
+    height,
+    top: 0,
+    left: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    zIndex: 5,
+  },
+  camera:{
+    flexDirection:"row",
+    alignItems:"center",
+    justifyContent:"center",
+    borderColor:"green",
+    borderWidth:3,
+
+  },
+  cardContainer:{
+    borderColor:"white",
+    borderWidth:3,
+    alignItems:"center",
+    justifyContent:"center",
+  },
+    row: {
+      borderColor:"red",
+      borderWidth:2,
+     flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  paddingHorizontal: 8,
+  },
+  cardContent:{
+    borderColor:'black',
+    borderWidth:2,
+      flex: 1,
+  marginRight: 10, // space before buttons    
+
+  },
+  cardButtons:{
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
+  flexShrink: 0, // don't shrink
+    borderColor:"blue",
+    borderWidth:3,
+  }
+});

@@ -1,0 +1,115 @@
+import { StyleSheet, Text, useColorScheme, View, Dimensions, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { Button, IconButton } from 'react-native-paper';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+
+const { width } = Dimensions.get('window');
+const DRAWER_WIDTH = 250;
+
+const ScreenA = () => {
+  const colorScheme = useColorScheme();
+  const backgroundColor = colorScheme === 'dark' ? 'white' : 'black';
+
+  const leftDrawer = useSharedValue(-DRAWER_WIDTH);
+  const rightDrawer = useSharedValue(width);
+
+  const leftDrawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: leftDrawer.value }],
+  }));
+
+  const rightDrawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: rightDrawer.value }],
+  }));
+
+  const openLeftDrawer = () => {
+    leftDrawer.value = withTiming(0, { duration: 300 });
+  };
+
+  const closeLeftDrawer = () => {
+    leftDrawer.value = withTiming(-DRAWER_WIDTH, { duration: 300 });
+  };
+
+  const openRightDrawer = () => {
+    rightDrawer.value = withTiming(width - DRAWER_WIDTH, { duration: 300 });
+  };
+
+  const closeRightDrawer = () => {
+    rightDrawer.value = withTiming(width, { duration: 300 });
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor }]}>
+      <View style={styles.buttonContainer}>
+        <IconButton icon="menu" mode="contained" onPress={openLeftDrawer} />
+        <Button icon="camera" mode="contained" onPress={() => console.log('Camera opened')}>
+          Click to open camera
+        </Button>
+        <IconButton icon="cog" mode="outlined" onPress={openRightDrawer} />
+      </View>
+
+      {/* Left Drawer */}
+      <Animated.View style={[styles.drawer, styles.leftDrawer, leftDrawerStyle]}>
+        <Text style={styles.drawerTitle}>Menu</Text>
+        <TouchableOpacity onPress={closeLeftDrawer}>
+          <Text style={styles.closeBtn}>Close</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Right Drawer */}
+      <Animated.View style={[styles.drawer, styles.rightDrawer, rightDrawerStyle]}>
+        <Text style={styles.drawerTitle}>Settings</Text>
+        <TouchableOpacity onPress={closeRightDrawer}>
+          <Text style={styles.closeBtn}>Close</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+};
+
+export default ScreenA;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: DRAWER_WIDTH,
+    backgroundColor: '#fff',
+    padding: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 2, height: 0 },
+    zIndex: 10,
+  },
+  leftDrawer: {
+    left: 0,
+  },
+  rightDrawer: {
+    right: 0,
+  },
+  drawerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  closeBtn: {
+    color: 'blue',
+    marginTop: 10,
+  },
+});
